@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | PRO
 ## Everyday commands
 
 - `promptr update` — pull the latest prompts into `~/.prompts`.
-- `promptr link antigravity|opencode|all` — create a `promptr/` symlink in the target app directory. Add `--force` if a link already exists.
+- `promptr link antigravity|opencode|claude|all` — create a `promptr/` symlink in the target app directory. Add `--force` if a link already exists.
 - `promptr self-update` — download the latest CLI script and save it to `~/.local/bin`.
 - `promptr --help` — show all options.
 

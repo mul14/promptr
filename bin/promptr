@@ -28,7 +28,7 @@ Prompts live in $PROMPTS_HOME
 Commands:
     update          Fetch and merge latest prompts from the remote repository
     self-update     Update the promptr script itself
-    link            Create symlink for specific target or all (antigravity, opencode, all)
+    link            Create symlink for specific target or all (antigravity, opencode, claude, all)
 
 Link flags:
     --force         Remove existing destination symlink before recreating
@@ -195,6 +195,7 @@ show_link_usage() {
     echo "Supported targets:"
     echo "  antigravity    Create symlink for Gemini AI global workflows (~/.gemini/antigravity/global_workflows/promptr)"
     echo "  opencode       Create symlink for OpenCode command prompts (~/.config/opencode/command/promptr)"
+    echo "  claude         Create symlink for Claude commands (~/.claude/commands/promptr)"
     echo "  all            Create symlinks for all supported targets"
 }
 
@@ -211,12 +212,16 @@ cmd_link() {
         all)
             create_symlink "$HOME/.gemini/antigravity/global_workflows" promptr || status=1
             create_symlink "$HOME/.config/opencode/command" promptr || status=1
+            create_symlink "$HOME/.claude/commands" promptr || status=1
             ;;
         antigravity)
             create_symlink "$HOME/.gemini/antigravity/global_workflows" promptr || status=1
             ;;
         opencode)
             create_symlink "$HOME/.config/opencode/command" promptr || status=1
+            ;;
+        claude)
+            create_symlink "$HOME/.claude/commands" promptr || status=1
             ;;
         *)
             echo "❌ Unknown target: $TARGET_ARG"
