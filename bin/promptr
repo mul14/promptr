@@ -1,0 +1,309 @@
+#!/bin/bash
+
+set -euo pipefail
+
+VERSION="1.0.0"
+VERBOSE=false
+COMMAND=""
+TARGET_ARG=""
+FORCE=false
+
+PROMPTS_HOME="${PROMPTR_DIR:-$HOME/.prompts}"
+REPO_BIN="$PROMPTS_HOME/bin/promptr"
+INSTALL_BIN="$HOME/.local/bin/promptr"
+
+log_verbose() {
+    if [ "$VERBOSE" = true ]; then
+        echo "$(date '+%Y-%m-%d %H:%M:%S'): $*"
+    fi
+}
+
+show_help() {
+    cat <<EOF
+promptr - Prompt management tool v$VERSION
+
+A CLI tool for managing and syncing prompt collections via Git.
+Prompts live in $PROMPTS_HOME
+
+Commands:
+    update          Fetch and merge latest prompts from the remote repository
+    self-update     Update the promptr script itself
+    link            Create symlink for specific target or all (antigravity, opencode, all)
+
+Link flags:
+    --force         Remove existing destination symlink before recreating
+
+Global flags:
+    --version       Show version
+    --help          Show this help message
+    --verbose       Enable verbose logging
+
+Usage: promptr [flags] [command] [flags]
+EOF
+}
+
+show_version() {
+    echo "promptr version $VERSION - Prompt collection manager."
+}
+
+require_repo() {
+    if [ ! -d "$PROMPTS_HOME/.git" ]; then
+        echo "❌ Prompt repository not found at $PROMPTS_HOME. Set PROMPTR_DIR to your clone (default ~/.prompts) or rerun the setup script with your repo URL."
+        exit 1
+    fi
+}
+
+check_self_loop() {
+    local source_dir=$1
+    local self_loop_link="$source_dir/$(basename "$source_dir")"
+
+    if [ -L "$self_loop_link" ] && [ "$(readlink "$self_loop_link")" = "$source_dir" ]; then
+        echo "❌ Found recursive symlink at $self_loop_link; remove it with: rm $self_loop_link"
+        return 1
+    fi
+
+    return 0
+}
+
+validate_source_dir() {
+    local source_dir=$1
+
+    if [ ! -d "$source_dir" ]; then
+        echo "❌ Cannot create symlink: source directory $source_dir is missing"
+        return 1
+    fi
+
+    if [ -L "$source_dir" ]; then
+        echo "❌ Cannot create symlink: $source_dir is itself a symlink (nested symlinks not allowed)"
+        return 1
+    fi
+
+    check_self_loop "$source_dir"
+}
+
+guard_target_path() {
+    local target_dir=$1
+    local source_dir=$2
+
+    if [ "$target_dir" = "$source_dir" ]; then
+        echo "❌ Cannot link $target_dir to itself (would create recursive symlink)"
+        return 1
+    fi
+
+    case "$target_dir" in
+        "$source_dir"|"$source_dir"/*)
+            echo "❌ Cannot create symlink inside $source_dir (would create recursive link at $target_dir)"
+            return 1
+            ;;
+    esac
+
+    local check_dir="$target_dir"
+    while [ "$check_dir" != "/" ] && [ "$check_dir" != "." ] && [ "$check_dir" != ".." ]; do
+        if [ -L "$check_dir" ]; then
+            echo "❌ Cannot create symlink: path $target_dir contains symlink at $check_dir (would create nested symlinks)"
+            return 1
+        fi
+        check_dir=$(dirname "$check_dir")
+    done
+
+    return 0
+}
+
+prepare_destination() {
+    local destination=$1
+
+    if [ -e "$destination" ] && [ "$FORCE" = false ]; then
+        echo "❌ $destination already exists. Use --force to replace an existing symlink."
+        return 1
+    fi
+
+    if [ "$FORCE" = true ] && [ -e "$destination" ] && [ ! -L "$destination" ]; then
+        echo "❌ Cannot use --force: $destination exists and is not a symlink (refusing to remove)"
+        return 1
+    fi
+
+    if [ "$FORCE" = true ] && [ -L "$destination" ]; then
+        rm "$destination" || {
+            echo "❌ Failed to remove existing symlink at $destination (needed for --force)"
+            return 1
+        }
+    fi
+}
+
+create_symlink() {
+    local target_dir=$1
+    local link_name=$2
+    local source_dir="$PROMPTS_HOME"
+    local destination="$target_dir/$link_name"
+
+    validate_source_dir "$source_dir" || return 1
+    guard_target_path "$target_dir" "$source_dir" || return 1
+    prepare_destination "$destination" || return 1
+
+    mkdir -p "$target_dir"
+    ln -s "$source_dir" "$destination"
+    check_self_loop "$source_dir" || return 1
+    echo "✅ Symlink created/updated at $target_dir/$link_name"
+}
+
+cmd_update() {
+    require_repo
+
+    log_verbose "Updating prompt repository at $PROMPTS_HOME..."
+    if [ "$VERBOSE" = true ]; then
+        git -C "$PROMPTS_HOME" status --short
+    fi
+
+    if git -C "$PROMPTS_HOME" pull ${VERBOSE:+--verbose}; then
+        echo "✅ Prompts updated successfully at $PROMPTS_HOME."
+    else
+        echo "❌ Failed to update prompts. Check your connection and repository permissions."
+        exit 1
+    fi
+}
+
+cmd_self_update() {
+    mkdir -p "$(dirname "$INSTALL_BIN")"
+
+    local cli_url="${PROMPTR_CLI_URL:-https://raw.githubusercontent.com/mul14/promptr/master/bin/promptr}"
+    echo "Downloading promptr from $cli_url ..."
+
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "$cli_url" -o "$INSTALL_BIN" || {
+            echo "❌ Failed to download CLI from $cli_url. Set PROMPTR_CLI_URL to a valid URL and retry."
+            exit 1
+        }
+    elif command -v wget >/dev/null 2>&1; then
+        wget -qO "$INSTALL_BIN" "$cli_url" || {
+            echo "❌ Failed to download CLI from $cli_url. Set PROMPTR_CLI_URL to a valid URL and retry."
+            exit 1
+        }
+    else
+        echo "❌ Neither curl nor wget is available to download the CLI."
+        exit 1
+    fi
+
+    chmod +x "$INSTALL_BIN" || {
+        echo "❌ Failed to set execute permission on $INSTALL_BIN"
+        exit 1
+    }
+    echo "✅ Promptr script updated at $INSTALL_BIN."
+}
+
+show_link_usage() {
+    echo "❌ Usage: promptr link [--force] <target|all>"
+    echo "Supported targets:"
+    echo "  antigravity    Create symlink for Gemini AI global workflows (~/.gemini/antigravity/global_workflows/promptr)"
+    echo "  opencode       Create symlink for OpenCode command prompts (~/.config/opencode/command/promptr)"
+    echo "  all            Create symlinks for all supported targets"
+}
+
+cmd_link() {
+    require_repo
+
+    if [ -z "$TARGET_ARG" ]; then
+        show_link_usage
+        exit 1
+    fi
+
+    local status=0
+    case $TARGET_ARG in
+        all)
+            create_symlink "$HOME/.gemini/antigravity/global_workflows" promptr || status=1
+            create_symlink "$HOME/.config/opencode/command" promptr || status=1
+            ;;
+        antigravity)
+            create_symlink "$HOME/.gemini/antigravity/global_workflows" promptr || status=1
+            ;;
+        opencode)
+            create_symlink "$HOME/.config/opencode/command" promptr || status=1
+            ;;
+        *)
+            echo "❌ Unknown target: $TARGET_ARG"
+            show_link_usage
+            exit 1
+            ;;
+    esac
+
+    if [ $status -ne 0 ]; then
+        exit 1
+    fi
+}
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --version)
+                show_version
+                exit 0
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            --verbose)
+                VERBOSE=true
+                shift
+                ;;
+            *)
+                COMMAND=$1
+                shift
+                while [[ $# -gt 0 ]]; do
+                    case $1 in
+                        --verbose)
+                            VERBOSE=true
+                            shift
+                            ;;
+                        --force)
+                            FORCE=true
+                            shift
+                            ;;
+                        -*)
+                            echo "❌ Unknown flag: $1"
+                            echo "Run 'promptr --help' for usage."
+                            exit 1
+                            ;;
+                        *)
+                            if [ -z "$TARGET_ARG" ]; then
+                                TARGET_ARG=$1
+                                shift
+                            else
+                                echo "❌ Unexpected argument: $1"
+                                echo "Run 'promptr --help' for usage."
+                                exit 1
+                            fi
+                            ;;
+                    esac
+                done
+                break
+                ;;
+        esac
+    done
+}
+
+main() {
+    parse_args "$@"
+
+    case "$COMMAND" in
+        "")
+            show_help
+            exit 0
+            ;;
+        update)
+            cmd_update
+            ;;
+        self-update)
+            cmd_self_update
+            ;;
+        link)
+            cmd_link
+            ;;
+        *)
+            echo "❌ Unknown command: $COMMAND"
+            echo "Run 'promptr --help' for available commands."
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
