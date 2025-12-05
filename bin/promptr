@@ -28,7 +28,7 @@ Prompts live in $PROMPTS_HOME
 Commands:
     update          Fetch and merge latest prompts from the remote repository
     self-update     Update the promptr script itself
-    link            Create symlink for specific target or all (antigravity, opencode, claude, all)
+    link            Create symlink for specific target or all (antigravity, opencode, claude, roo, all)
 
 Link flags:
     --force         Remove existing destination symlink before recreating
@@ -146,6 +146,29 @@ create_symlink() {
     echo "✅ Symlink created/updated at $target_dir/$link_name"
 }
 
+copy_roo_files() {
+    local dest_dir="$HOME/.roo/commands"
+
+    if [ "$FORCE" = true ]; then
+        rm -rf "$dest_dir"/*
+    fi
+
+    mkdir -p "$dest_dir"
+
+    local files
+    files=$(find "$PROMPTS_HOME" -name "*.md" ! -name "README.md" -type f)
+    if [ -z "$files" ]; then
+        echo "⚠️  No *.md files found in $PROMPTS_HOME (excluding README.md)"
+        return 0
+    fi
+
+    echo "$files" | while IFS= read -r file; do
+        cp "$file" "$dest_dir"
+    done
+
+    echo "✅ Copied *.md files to $dest_dir"
+}
+
 cmd_update() {
     require_repo
 
@@ -196,7 +219,8 @@ show_link_usage() {
     echo "  antigravity    Create symlink for Gemini AI global workflows (~/.gemini/antigravity/global_workflows/promptr)"
     echo "  opencode       Create symlink for OpenCode command prompts (~/.config/opencode/command/promptr)"
     echo "  claude         Create symlink for Claude commands (~/.claude/commands/promptr)"
-    echo "  all            Create symlinks for all supported targets"
+    echo "  roo            Copy *.md files to Roo commands directory (~/.roo/commands)"
+    echo "  all            Create symlinks for all supported targets and copy for Roo"
 }
 
 cmd_link() {
@@ -213,6 +237,7 @@ cmd_link() {
             create_symlink "$HOME/.gemini/antigravity/global_workflows" promptr || status=1
             create_symlink "$HOME/.config/opencode/command" promptr || status=1
             create_symlink "$HOME/.claude/commands" promptr || status=1
+            copy_roo_files || status=1
             ;;
         antigravity)
             create_symlink "$HOME/.gemini/antigravity/global_workflows" promptr || status=1
@@ -222,6 +247,9 @@ cmd_link() {
             ;;
         claude)
             create_symlink "$HOME/.claude/commands" promptr || status=1
+            ;;
+        roo)
+            copy_roo_files || status=1
             ;;
         *)
             echo "❌ Unknown target: $TARGET_ARG"
