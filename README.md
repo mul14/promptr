@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | PRO
 ## Everyday commands
 
 - `promptr update` — pull the latest prompts into `~/.prompts`.
-- `promptr link antigravity|codex|copilot|opencode|claude|roo|all` — copy `*.md` files to AntiGravity/Roo, copy prefixed files to Copilot (platform path) and Codex at `~/.codex/prompts`, and create symlinks for OpenCode/Claude. Add `--force` if a link already exists.
+- `promptr link antigravity|codex|copilot|droid|opencode|claude|roo|all` — copy `*.md` files to AntiGravity/Roo, copy prefixed files to Copilot (platform path), Droid at `~/.factory/commands`, and Codex at `~/.codex/prompts`, and create symlinks for OpenCode/Claude. Add `--force` if a link already exists.
 - `promptr self-update` — download the latest CLI script and save it to `~/.local/bin`.
 - `promptr --help` — show all options.
 
@@ -32,6 +32,7 @@ curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | PRO
 - The CLI installs to `~/.local/bin/promptr`. Make sure `~/.local/bin` is on your PATH.
 - Codex prompt copies (when linked) are stored in `~/.codex/prompts` with filenames prefixed by `promptr-`.
 - Copilot prompt copies (when linked) are stored with `promptr-` filename prefixes in `~/Application Support/Code/User/prompts` on macOS or `~/.config/Code/User/prompts` on Linux.
+- Droid prompt copies (when linked) are stored with `promptr-` filename prefixes in `~/.factory/commands`.
 
 ## Prompt format
 

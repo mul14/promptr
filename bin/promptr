@@ -16,6 +16,7 @@ LINKS_FILE="$CONFIG_DIR/links"
 ANTIGRAVITY_DIR="$HOME/.gemini/antigravity/global_workflows"
 CODEX_DIR="$HOME/.codex/prompts"
 COPILOT_DIR="$HOME/.config/Code/User/prompts"
+DROID_DIR="$HOME/.factory/commands"
 
 if [ "$(uname)" = "Darwin" ]; then
     COPILOT_DIR="$HOME/Library/Application Support/Code/User/prompts"
@@ -37,8 +38,8 @@ Prompts live in $PROMPTS_HOME
 Commands:
     update          Fetch and merge latest prompts from the remote repository
     self-update     Update the promptr script itself
-    link            Create links for specific target or all (antigravity, codex, copilot, opencode, claude, roo, all)
-    unlink          Remove links for specific target or all (antigravity, codex, copilot, opencode, claude, roo, all)
+    link            Create links for specific target or all (antigravity, codex, copilot, droid, opencode, claude, roo, all)
+    unlink          Remove links for specific target or all (antigravity, codex, copilot, droid, opencode, claude, roo, all)
 
 Link flags:
     --force         Remove existing destination symlink before recreating
@@ -269,6 +270,30 @@ copy_codex_files() {
     echo "✅ Copied prefixed *.md files to $dest_dir"
 }
 
+copy_droid_files() {
+    local dest_dir="$DROID_DIR"
+
+    mkdir -p "$dest_dir"
+
+    local files
+    files=$(find "$PROMPTS_HOME" -name "*.md" ! -name "README.md" -type f)
+    if [ -z "$files" ]; then
+        echo "⚠️  No *.md files found in $PROMPTS_HOME (excluding README.md)"
+        return 0
+    fi
+
+    echo "$files" | while IFS= read -r file; do
+        local dest_file="$dest_dir/promptr-$(basename "$file")"
+        if [ "$FORCE" = true ] && [ -e "$dest_file" ]; then
+            rm -f "$dest_file"
+        fi
+        cp "$file" "$dest_file"
+    done
+
+    record_linked_target "droid"
+    echo "✅ Copied prefixed *.md files to $dest_dir"
+}
+
 copy_copilot_files() {
     local dest_dir="$COPILOT_DIR"
 
@@ -364,6 +389,29 @@ unlink_codex() {
     echo "✅ Removed Codex prompt copies from $dest_dir"
 }
 
+unlink_droid() {
+    local dest_dir="$DROID_DIR"
+
+    if [ ! -d "$dest_dir" ]; then
+        clear_linked_target "droid"
+        return 0
+    fi
+
+    local files
+    files=$(find "$PROMPTS_HOME" -name "*.md" ! -name "README.md" -type f)
+    if [ -n "$files" ]; then
+        echo "$files" | while IFS= read -r file; do
+            local dest_file="$dest_dir/promptr-$(basename "$file")"
+            if [ -e "$dest_file" ]; then
+                rm -f "$dest_file"
+            fi
+        done
+    fi
+
+    clear_linked_target "droid"
+    echo "✅ Removed Droid prompt copies from $dest_dir"
+}
+
 unlink_copilot() {
     local dest_dir="$COPILOT_DIR"
 
@@ -457,7 +505,7 @@ show_link_usage() {
     echo "  opencode       Create symlink for OpenCode command prompts (~/.config/opencode/command/promptr)"
     echo "  claude         Create symlink for Claude commands (~/.claude/commands/promptr)"
     echo "  roo            Copy *.md files to Roo commands directory (~/.roo/commands)"
-    echo "  all            Link all targets (copy for AntiGravity/Roo/Copilot/Codex, symlink for OpenCode/Claude)"
+    echo "  all            Link all targets (copy for AntiGravity/Roo/Droid/Copilot/Codex, symlink for OpenCode/Claude)"
 }
 
 cmd_link() {
@@ -475,6 +523,7 @@ cmd_link() {
             create_symlink "$HOME/.config/opencode/command" promptr && record_linked_target "opencode" || status=1
             create_symlink "$HOME/.claude/commands" promptr && record_linked_target "claude" || status=1
             copy_roo_files && record_linked_target "roo" || status=1
+            copy_droid_files || status=1
             copy_copilot_files || status=1
             copy_codex_files || status=1
             ;;
@@ -483,6 +532,9 @@ cmd_link() {
             ;;
         codex)
             copy_codex_files || status=1
+            ;;
+        droid)
+            copy_droid_files || status=1
             ;;
         copilot)
             copy_copilot_files || status=1
@@ -550,6 +602,7 @@ cmd_unlink() {
             remove_symlink_target "$HOME/.claude/commands" promptr || status=1
             clear_linked_target "claude"
             unlink_roo || status=1
+            unlink_droid || status=1
             unlink_copilot || status=1
             unlink_codex || status=1
             clear_all_linked_targets
@@ -559,6 +612,9 @@ cmd_unlink() {
             ;;
         codex)
             unlink_codex || status=1
+            ;;
+        droid)
+            unlink_droid || status=1
             ;;
         copilot)
             unlink_copilot || status=1
