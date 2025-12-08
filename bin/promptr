@@ -307,7 +307,9 @@ copy_copilot_files() {
     fi
 
     echo "$files" | while IFS= read -r file; do
-        local dest_file="$dest_dir/promptr-$(basename "$file")"
+        local name_no_ext
+        name_no_ext=$(basename "$file" .md)
+        local dest_file="$dest_dir/promptr-$name_no_ext.prompt.md"
         if [ "$FORCE" = true ] && [ -e "$dest_file" ]; then
             rm -f "$dest_file"
         fi
@@ -315,7 +317,7 @@ copy_copilot_files() {
     done
 
     record_linked_target "copilot"
-    echo "✅ Copied prefixed *.md files to \"$dest_dir\""
+    echo "✅ Copied prefixed *.prompt.md files to \"$dest_dir\""
 }
 
 unlink_antigravity() {
@@ -424,7 +426,9 @@ unlink_copilot() {
     files=$(find "$PROMPTS_HOME" -name "*.md" ! -name "README.md" -type f)
     if [ -n "$files" ]; then
         echo "$files" | while IFS= read -r file; do
-            local dest_file="$dest_dir/promptr-$(basename "$file")"
+            local name_no_ext
+            name_no_ext=$(basename "$file" .md)
+            local dest_file="$dest_dir/promptr-$name_no_ext.prompt.md"
             if [ -e "$dest_file" ]; then
                 rm -f "$dest_file"
             fi
@@ -500,7 +504,7 @@ show_link_usage() {
     echo "Supported targets:"
     echo "  antigravity    Copy *.md prompts to Gemini AI global workflows (~/.gemini/antigravity/global_workflows)"
     echo "  codex          Copy *.md prompts to Codex prompts directory (~/.codex/prompts) with promptr- prefix"
-    echo "  copilot        Copy *.md prompts to Copilot prompts directory (~/Library/Application Support/Code/User/prompts on macOS, ~/.config/Code/User/prompts on Linux) with promptr- prefix"
+    echo "  copilot        Copy *.md prompts to Copilot prompts directory (~/Library/Application Support/Code/User/prompts on macOS, ~/.config/Code/User/prompts on Linux) with promptr- prefix and .prompt.md suffix"
     echo "  droid          Copy *.md prompts to Droid commands directory (~/.factory/commands) with promptr- prefix"
     echo "  opencode       Create symlink for OpenCode command prompts (~/.config/opencode/command/promptr)"
     echo "  claude         Create symlink for Claude commands (~/.claude/commands/promptr)"
@@ -565,7 +569,7 @@ show_unlink_usage() {
     echo "Supported targets:"
     echo "  antigravity    Remove copied prompts from ~/.gemini/antigravity/global_workflows"
     echo "  codex          Remove prefixed copied prompts from ~/.codex/prompts"
-    echo "  copilot        Remove prefixed copied prompts from Copilot prompts directory (~/Library/Application Support/Code/User/prompts on macOS, ~/.config/Code/User/prompts on Linux)"
+    echo "  copilot        Remove prefixed copied prompts (.prompt.md) from Copilot prompts directory (~/Library/Application Support/Code/User/prompts on macOS, ~/.config/Code/User/prompts on Linux)"
     echo "  droid          Remove prefixed copied prompts from ~/.factory/commands"
     echo "  opencode       Remove symlink at ~/.config/opencode/command/promptr"
     echo "  claude         Remove symlink at ~/.claude/commands/promptr"
