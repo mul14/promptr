@@ -10,6 +10,7 @@ fi
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | bash -s -- https://github.com/your/prompt.git
 #   curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | PROMPTR_REPO=https://github.com/your/prompt.git bash
+#   curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | PROMPTR_REPO=https://github.com/your/prompt.git PROMPTR_PREFIX=custom- bash
 #   PROMPTR_REPO=https://github.com/your/prompt.git bash setup.sh   # using a local copy of setup.sh
 #
 # Arguments:
@@ -63,6 +64,8 @@ fi
 
 PROMPTR_CLI_URL="${PROMPTR_CLI_URL:-https://raw.githubusercontent.com/mul14/promptr/master/bin/promptr}"
 INSTALL_BIN="$HOME/.local/bin/promptr"
+CONFIG_DIR="$HOME/.config/promptr"
+PREFIX_FILE="$CONFIG_DIR/prefix"
 cli_was_present=false
 if [ -f "$INSTALL_BIN" ]; then
     cli_was_present=true
@@ -95,6 +98,11 @@ if "$INSTALL_BIN" --version >/dev/null 2>&1; then
     echo "promptr version: $("$INSTALL_BIN" --version)"
 else
     echo "promptr version: unavailable (run $INSTALL_BIN --version to check)"
+fi
+if [ -n "${PROMPTR_PREFIX:-}" ]; then
+    mkdir -p "$CONFIG_DIR"
+    echo -n "$PROMPTR_PREFIX" >"$PREFIX_FILE"
+    echo "Using PROMPTR_PREFIX=\"$PROMPTR_PREFIX\" for copied filenames (saved to $PREFIX_FILE). Add this export to your shell profile to override per session."
 fi
 
 PATH_LINE_ADDED=false

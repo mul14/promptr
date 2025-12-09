@@ -13,6 +13,9 @@ REPO_BIN="$PROMPTS_HOME/bin/promptr"
 INSTALL_BIN="$HOME/.local/bin/promptr"
 CONFIG_DIR="$HOME/.config/promptr"
 LINKS_FILE="$CONFIG_DIR/links"
+PREFIX_FILE="$CONFIG_DIR/prefix"
+FILENAME_PREFIX_DEFAULT="promptr-"
+FILENAME_PREFIX="$FILENAME_PREFIX_DEFAULT"
 ANTIGRAVITY_DIR="$HOME/.gemini/antigravity/global_workflows"
 CODEX_DIR="$HOME/.codex/prompts"
 COPILOT_DIR="$HOME/.config/Code/User/prompts"
@@ -79,6 +82,28 @@ check_self_loop() {
 ensure_config_dir() {
     mkdir -p "$CONFIG_DIR"
 }
+
+load_filename_prefix() {
+    if [ -n "${PROMPTR_PREFIX:-}" ]; then
+        ensure_config_dir
+        echo -n "$PROMPTR_PREFIX" >"$PREFIX_FILE"
+        echo "$PROMPTR_PREFIX"
+        return
+    fi
+
+    if [ -f "$PREFIX_FILE" ]; then
+        local stored_prefix
+        stored_prefix=$(cat "$PREFIX_FILE")
+        if [ -n "$stored_prefix" ]; then
+            echo "$stored_prefix"
+            return
+        fi
+    fi
+
+    echo "$FILENAME_PREFIX_DEFAULT"
+}
+
+FILENAME_PREFIX="$(load_filename_prefix)"
 
 is_target_linked() {
     local target=$1
@@ -207,7 +232,7 @@ copy_antigravity_files() {
     local files
     files=$(find "$PROMPTS_HOME" -name "*.md" ! -name "README.md" -type f)
     if [ -z "$files" ]; then
-        echo "⚠️  No *.md files found in $PROMPTS_HOME (excluding README.md)"
+        echo "⚠️  No *.md files found in $PROMPTS_HOME"
         return 0
     fi
 
@@ -235,7 +260,7 @@ copy_roo_files() {
     local files
     files=$(find "$PROMPTS_HOME" -name "*.md" ! -name "README.md" -type f)
     if [ -z "$files" ]; then
-        echo "⚠️  No *.md files found in $PROMPTS_HOME (excluding README.md)"
+        echo "⚠️  No *.md files found in $PROMPTS_HOME"
         return 0
     fi
 
@@ -254,12 +279,12 @@ copy_codex_files() {
     local files
     files=$(find "$PROMPTS_HOME" -name "*.md" ! -name "README.md" -type f)
     if [ -z "$files" ]; then
-        echo "⚠️  No *.md files found in $PROMPTS_HOME (excluding README.md)"
+        echo "⚠️  No *.md files found in $PROMPTS_HOME"
         return 0
     fi
 
     echo "$files" | while IFS= read -r file; do
-        local dest_file="$dest_dir/promptr-$(basename "$file")"
+        local dest_file="$dest_dir/${FILENAME_PREFIX}$(basename "$file")"
         if [ "$FORCE" = true ] && [ -e "$dest_file" ]; then
             rm -f "$dest_file"
         fi
@@ -278,12 +303,12 @@ copy_droid_files() {
     local files
     files=$(find "$PROMPTS_HOME" -name "*.md" ! -name "README.md" -type f)
     if [ -z "$files" ]; then
-        echo "⚠️  No *.md files found in $PROMPTS_HOME (excluding README.md)"
+        echo "⚠️  No *.md files found in $PROMPTS_HOME"
         return 0
     fi
 
     echo "$files" | while IFS= read -r file; do
-        local dest_file="$dest_dir/promptr-$(basename "$file")"
+        local dest_file="$dest_dir/${FILENAME_PREFIX}$(basename "$file")"
         if [ "$FORCE" = true ] && [ -e "$dest_file" ]; then
             rm -f "$dest_file"
         fi
@@ -302,14 +327,14 @@ copy_copilot_files() {
     local files
     files=$(find "$PROMPTS_HOME" -name "*.md" ! -name "README.md" -type f)
     if [ -z "$files" ]; then
-        echo "⚠️  No *.md files found in $PROMPTS_HOME (excluding README.md)"
+        echo "⚠️  No *.md files found in $PROMPTS_HOME"
         return 0
     fi
 
     echo "$files" | while IFS= read -r file; do
         local name_no_ext
         name_no_ext=$(basename "$file" .md)
-        local dest_file="$dest_dir/promptr-$name_no_ext.prompt.md"
+        local dest_file="$dest_dir/${FILENAME_PREFIX}$name_no_ext.prompt.md"
         if [ "$FORCE" = true ] && [ -e "$dest_file" ]; then
             rm -f "$dest_file"
         fi
@@ -380,7 +405,7 @@ unlink_codex() {
     files=$(find "$PROMPTS_HOME" -name "*.md" ! -name "README.md" -type f)
     if [ -n "$files" ]; then
         echo "$files" | while IFS= read -r file; do
-            local dest_file="$dest_dir/promptr-$(basename "$file")"
+            local dest_file="$dest_dir/${FILENAME_PREFIX}$(basename "$file")"
             if [ -e "$dest_file" ]; then
                 rm -f "$dest_file"
             fi
@@ -403,7 +428,7 @@ unlink_droid() {
     files=$(find "$PROMPTS_HOME" -name "*.md" ! -name "README.md" -type f)
     if [ -n "$files" ]; then
         echo "$files" | while IFS= read -r file; do
-            local dest_file="$dest_dir/promptr-$(basename "$file")"
+            local dest_file="$dest_dir/${FILENAME_PREFIX}$(basename "$file")"
             if [ -e "$dest_file" ]; then
                 rm -f "$dest_file"
             fi
@@ -428,7 +453,7 @@ unlink_copilot() {
         echo "$files" | while IFS= read -r file; do
             local name_no_ext
             name_no_ext=$(basename "$file" .md)
-            local dest_file="$dest_dir/promptr-$name_no_ext.prompt.md"
+            local dest_file="$dest_dir/${FILENAME_PREFIX}$name_no_ext.prompt.md"
             if [ -e "$dest_file" ]; then
                 rm -f "$dest_file"
             fi
@@ -503,9 +528,9 @@ show_link_usage() {
     echo "❌ Usage: promptr link [--force] <target|all>"
     echo "Supported targets:"
     echo "  antigravity    Copy *.md prompts to Gemini AI global workflows (~/.gemini/antigravity/global_workflows)"
-    echo "  codex          Copy *.md prompts to Codex prompts directory (~/.codex/prompts) with promptr- prefix"
-    echo "  copilot        Copy *.md prompts to Copilot prompts directory (~/Library/Application Support/Code/User/prompts on macOS, ~/.config/Code/User/prompts on Linux) with promptr- prefix and .prompt.md suffix"
-    echo "  droid          Copy *.md prompts to Droid commands directory (~/.factory/commands) with promptr- prefix"
+    echo "  codex          Copy *.md prompts to Codex prompts directory (~/.codex/prompts) with configured prefix (default promptr-)"
+    echo "  copilot        Copy *.md prompts to Copilot prompts directory (~/Library/Application Support/Code/User/prompts on macOS, ~/.config/Code/User/prompts on Linux) with configured prefix and .prompt.md suffix (default promptr-)"
+    echo "  droid          Copy *.md prompts to Droid commands directory (~/.factory/commands) with configured prefix (default promptr-)"
     echo "  opencode       Create symlink for OpenCode command prompts (~/.config/opencode/command/promptr)"
     echo "  claude         Create symlink for Claude commands (~/.claude/commands/promptr)"
     echo "  roo            Copy *.md files to Roo commands directory (~/.roo/commands)"
@@ -568,9 +593,9 @@ show_unlink_usage() {
     echo "❌ Usage: promptr unlink <target|all>"
     echo "Supported targets:"
     echo "  antigravity    Remove copied prompts from ~/.gemini/antigravity/global_workflows"
-    echo "  codex          Remove prefixed copied prompts from ~/.codex/prompts"
-    echo "  copilot        Remove prefixed copied prompts (.prompt.md) from Copilot prompts directory (~/Library/Application Support/Code/User/prompts on macOS, ~/.config/Code/User/prompts on Linux)"
-    echo "  droid          Remove prefixed copied prompts from ~/.factory/commands"
+    echo "  codex          Remove prefixed copied prompts from ~/.codex/prompts (uses configured prefix, default promptr-)"
+    echo "  copilot        Remove prefixed copied prompts (.prompt.md) from Copilot prompts directory (~/Library/Application Support/Code/User/prompts on macOS, ~/.config/Code/User/prompts on Linux) using configured prefix (default promptr-)"
+    echo "  droid          Remove prefixed copied prompts from ~/.factory/commands (uses configured prefix, default promptr-)"
     echo "  opencode       Remove symlink at ~/.config/opencode/command/promptr"
     echo "  claude         Remove symlink at ~/.claude/commands/promptr"
     echo "  roo            Remove copied prompts from ~/.roo/commands"
