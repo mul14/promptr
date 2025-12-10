@@ -22,6 +22,7 @@ COPILOT_DIR="$HOME/.config/Code/User/prompts"
 DROID_DIR="$HOME/.factory/commands"
 CURSOR_DIR="$HOME/.cursor/commands"
 WINDSURF_DIR="$HOME/.codeium/windsurf/global_workflows"
+GEMINI_COMMANDS_DIR="$HOME/.gemini/commands"
 
 if [ "$(uname)" = "Darwin" ]; then
     COPILOT_DIR="$HOME/Library/Application Support/Code/User/prompts"
@@ -43,8 +44,8 @@ Prompts live in $PROMPTS_HOME
 Commands:
     update          Fetch and merge latest prompts from the remote repository
     self-update     Update the promptr script itself
-    link            Create links for specific target or all (antigravity, codex, copilot, droid, opencode, claude, cursor, windsurf, roo, all)
-    unlink          Remove links for specific target or all (antigravity, codex, copilot, droid, opencode, claude, cursor, windsurf, roo, all)
+    link            Create links for specific target or all (antigravity, codex, copilot, droid, gemini, opencode, claude, cursor, windsurf, roo, all)
+    unlink          Remove links for specific target or all (antigravity, codex, copilot, droid, gemini, opencode, claude, cursor, windsurf, roo, all)
 
 Link flags:
     --force         Remove existing destination symlink before recreating
@@ -339,6 +340,88 @@ copy_droid_files() {
     echo "✅ Copied prefixed *.md files to $dest_dir"
 }
 
+extract_description() {
+    local file=$1
+    awk '
+    BEGIN { in_front=0 }
+    NR==1 && $0 ~ /^---[ \t]*$/ { in_front=1; next }
+    in_front && $0 ~ /^---[ \t]*$/ { exit }
+    in_front && $0 ~ /^description:[ \t]*/ {
+        line=$0
+        sub(/^description:[ \t]*/, "", line)
+        gsub(/^"[ \t]*/, "", line)
+        gsub(/"[ \t]*$/, "", line)
+        print line
+        exit
+    }
+    ' "$file"
+}
+
+extract_body() {
+    local file=$1
+    awk '
+    BEGIN { in_front=0 }
+    NR==1 && $0 ~ /^---[ \t]*$/ { in_front=1; next }
+    in_front && $0 ~ /^---[ \t]*$/ { in_front=0; next }
+    { if (!in_front) print }
+    ' "$file"
+}
+
+escape_toml_basic() {
+    sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+escape_toml_multiline() {
+    sed 's/\\/\\\\/g; s/\"\"\"/\\"""/g'
+}
+
+write_gemini_toml() {
+    local source_file=$1
+    local dest_file=$2
+
+    local description
+    description=$(extract_description "$source_file")
+    local body
+    body=$(extract_body "$source_file")
+
+    local escaped_desc
+    escaped_desc=$(printf "%s" "$description" | escape_toml_basic)
+    local escaped_body
+    escaped_body=$(printf "%s" "$body" | escape_toml_multiline)
+
+    cat >"$dest_file" <<EOF
+description = "$escaped_desc"
+prompt = """$escaped_body
+"""
+EOF
+}
+
+copy_gemini_files() {
+    local dest_dir="$GEMINI_COMMANDS_DIR"
+
+    mkdir -p "$dest_dir"
+
+    local files
+    files=$(find "$PROMPTS_HOME" -name "*.md" ! -name "README.md" -type f)
+    if [ -z "$files" ]; then
+        echo "⚠️  No *.md files found in $PROMPTS_HOME"
+        return 0
+    fi
+
+    echo "$files" | while IFS= read -r file; do
+        local base_no_ext
+        base_no_ext=$(basename "$file" .md)
+        local dest_file="$dest_dir/${FILENAME_PREFIX_DASHED}${base_no_ext}.toml"
+        if [ "$FORCE" = true ] && [ -e "$dest_file" ]; then
+            rm -f "$dest_file"
+        fi
+        write_gemini_toml "$file" "$dest_file"
+    done
+
+    record_linked_target "gemini"
+    echo "✅ Generated Gemini TOML files in $dest_dir"
+}
+
 copy_windsurf_files() {
     local dest_dir="$WINDSURF_DIR"
 
@@ -522,6 +605,31 @@ unlink_windsurf() {
     echo "✅ Removed Windsurf prompt copies from $dest_dir"
 }
 
+unlink_gemini() {
+    local dest_dir="$GEMINI_COMMANDS_DIR"
+
+    if [ ! -d "$dest_dir" ]; then
+        clear_linked_target "gemini"
+        return 0
+    fi
+
+    local files
+    files=$(find "$PROMPTS_HOME" -name "*.md" ! -name "README.md" -type f)
+    if [ -n "$files" ]; then
+        echo "$files" | while IFS= read -r file; do
+            local base_no_ext
+            base_no_ext=$(basename "$file" .md)
+            local dest_file="$dest_dir/${FILENAME_PREFIX_DASHED}${base_no_ext}.toml"
+            if [ -e "$dest_file" ]; then
+                rm -f "$dest_file"
+            fi
+        done
+    fi
+
+    clear_linked_target "gemini"
+    echo "✅ Removed Gemini TOML files from $dest_dir"
+}
+
 unlink_copilot() {
     local dest_dir="$COPILOT_DIR"
 
@@ -576,6 +684,10 @@ cmd_update() {
             log_verbose "Refreshing Windsurf prompt copies..."
             copy_windsurf_files
         fi
+        if is_target_linked "gemini"; then
+            log_verbose "Refreshing Gemini TOML files..."
+            copy_gemini_files
+        fi
         if is_target_linked "codex"; then
             log_verbose "Refreshing Codex prompt copies..."
             copy_codex_files
@@ -622,6 +734,7 @@ show_link_usage() {
     echo "  codex          Copy prompts to ~/.codex/prompts"
     echo "  copilot        Copy prompts to Copilot prompts dir"
     echo "  droid          Copy prompts to ~/.factory/commands"
+    echo "  gemini         Copy prompts to ~/.gemini/commands as TOML"
     echo "  opencode       Symlink ~/.prompts to ~/.config/opencode/command/<prefix>"
     echo "  claude         Symlink ~/.prompts to ~/.claude/commands/<prefix>"
     echo "  cursor         Symlink ~/.prompts to ~/.cursor/commands/<prefix>"
@@ -648,6 +761,7 @@ cmd_link() {
             copy_roo_files && record_linked_target "roo" || status=1
             copy_droid_files || status=1
             copy_copilot_files || status=1
+            copy_gemini_files || status=1
             copy_windsurf_files || status=1
             copy_codex_files || status=1
             ;;
@@ -662,6 +776,9 @@ cmd_link() {
             ;;
         copilot)
             copy_copilot_files || status=1
+            ;;
+        gemini)
+            copy_gemini_files || status=1
             ;;
         opencode)
             create_symlink "$HOME/.config/opencode/command" "$FILENAME_PREFIX" && record_linked_target "opencode" || status=1
@@ -697,6 +814,7 @@ show_unlink_usage() {
     echo "  codex          Remove prefixed copied prompts from ~/.codex/prompts (uses configured prefix, default promptr)"
     echo "  copilot        Remove prefixed copied prompts (.prompt.md) from Copilot prompts directory (~/Library/Application Support/Code/User/prompts on macOS, ~/.config/Code/User/prompts on Linux) using configured prefix"
     echo "  droid          Remove prefixed copied prompts from ~/.factory/commands (uses configured prefix, default promptr)"
+    echo "  gemini         Remove TOML prompts from ~/.gemini/commands (uses configured prefix, default promptr)"
     echo "  opencode       Remove symlink at ~/.config/opencode/command/<prefix>"
     echo "  claude         Remove symlink at ~/.claude/commands/<prefix>"
     echo "  cursor         Remove symlink at ~/.cursor/commands/<prefix>"
@@ -737,6 +855,7 @@ cmd_unlink() {
             clear_linked_target "cursor"
             unlink_roo || status=1
             unlink_droid || status=1
+            unlink_gemini || status=1
             unlink_windsurf || status=1
             unlink_copilot || status=1
             unlink_codex || status=1
@@ -750,6 +869,9 @@ cmd_unlink() {
             ;;
         droid)
             unlink_droid || status=1
+            ;;
+        gemini)
+            unlink_gemini || status=1
             ;;
         windsurf)
             unlink_windsurf || status=1
