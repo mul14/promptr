@@ -21,6 +21,7 @@ CODEX_DIR="$HOME/.codex/prompts"
 COPILOT_DIR="$HOME/.config/Code/User/prompts"
 DROID_DIR="$HOME/.factory/commands"
 CURSOR_DIR="$HOME/.cursor/commands"
+WINDSURF_DIR="$HOME/.codeium/windsurf/global_workflows"
 
 if [ "$(uname)" = "Darwin" ]; then
     COPILOT_DIR="$HOME/Library/Application Support/Code/User/prompts"
@@ -42,8 +43,8 @@ Prompts live in $PROMPTS_HOME
 Commands:
     update          Fetch and merge latest prompts from the remote repository
     self-update     Update the promptr script itself
-    link            Create links for specific target or all (antigravity, codex, copilot, droid, opencode, claude, cursor, roo, all)
-    unlink          Remove links for specific target or all (antigravity, codex, copilot, droid, opencode, claude, cursor, roo, all)
+    link            Create links for specific target or all (antigravity, codex, copilot, droid, opencode, claude, cursor, windsurf, roo, all)
+    unlink          Remove links for specific target or all (antigravity, codex, copilot, droid, opencode, claude, cursor, windsurf, roo, all)
 
 Link flags:
     --force         Remove existing destination symlink before recreating
@@ -338,6 +339,30 @@ copy_droid_files() {
     echo "✅ Copied prefixed *.md files to $dest_dir"
 }
 
+copy_windsurf_files() {
+    local dest_dir="$WINDSURF_DIR"
+
+    mkdir -p "$dest_dir"
+
+    local files
+    files=$(find "$PROMPTS_HOME" -name "*.md" ! -name "README.md" -type f)
+    if [ -z "$files" ]; then
+        echo "⚠️  No *.md files found in $PROMPTS_HOME"
+        return 0
+    fi
+
+    echo "$files" | while IFS= read -r file; do
+        local dest_file="$dest_dir/${FILENAME_PREFIX_DASHED}$(basename "$file")"
+        if [ "$FORCE" = true ] && [ -e "$dest_file" ]; then
+            rm -f "$dest_file"
+        fi
+        cp "$file" "$dest_file"
+    done
+
+    record_linked_target "windsurf"
+    echo "✅ Copied prefixed *.md files to $dest_dir"
+}
+
 copy_copilot_files() {
     local dest_dir="$COPILOT_DIR"
 
@@ -474,6 +499,29 @@ unlink_droid() {
     echo "✅ Removed Droid prompt copies from $dest_dir"
 }
 
+unlink_windsurf() {
+    local dest_dir="$WINDSURF_DIR"
+
+    if [ ! -d "$dest_dir" ]; then
+        clear_linked_target "windsurf"
+        return 0
+    fi
+
+    local files
+    files=$(find "$PROMPTS_HOME" -name "*.md" ! -name "README.md" -type f)
+    if [ -n "$files" ]; then
+        echo "$files" | while IFS= read -r file; do
+            local dest_file="$dest_dir/${FILENAME_PREFIX_DASHED}$(basename "$file")"
+            if [ -e "$dest_file" ]; then
+                rm -f "$dest_file"
+            fi
+        done
+    fi
+
+    clear_linked_target "windsurf"
+    echo "✅ Removed Windsurf prompt copies from $dest_dir"
+}
+
 unlink_copilot() {
     local dest_dir="$COPILOT_DIR"
 
@@ -524,6 +572,10 @@ cmd_update() {
             log_verbose "Refreshing Droid prompt copies..."
             copy_droid_files
         fi
+        if is_target_linked "windsurf"; then
+            log_verbose "Refreshing Windsurf prompt copies..."
+            copy_windsurf_files
+        fi
         if is_target_linked "codex"; then
             log_verbose "Refreshing Codex prompt copies..."
             copy_codex_files
@@ -573,6 +625,7 @@ show_link_usage() {
     echo "  opencode       Symlink ~/.prompts to ~/.config/opencode/command/<prefix>"
     echo "  claude         Symlink ~/.prompts to ~/.claude/commands/<prefix>"
     echo "  cursor         Symlink ~/.prompts to ~/.cursor/commands/<prefix>"
+    echo "  windsurf       Copy prompts to ~/.codeium/windsurf/global_workflows"
     echo "  roo            Copy prompts to ~/.roo/commands"
     echo "  all            Link all targets"
 }
@@ -595,6 +648,7 @@ cmd_link() {
             copy_roo_files && record_linked_target "roo" || status=1
             copy_droid_files || status=1
             copy_copilot_files || status=1
+            copy_windsurf_files || status=1
             copy_codex_files || status=1
             ;;
         antigravity)
@@ -617,6 +671,9 @@ cmd_link() {
             ;;
         cursor)
             create_symlink "$CURSOR_DIR" "$FILENAME_PREFIX" && record_linked_target "cursor" || status=1
+            ;;
+        windsurf)
+            copy_windsurf_files || status=1
             ;;
         roo)
             copy_roo_files && record_linked_target "roo" || status=1
@@ -643,6 +700,7 @@ show_unlink_usage() {
     echo "  opencode       Remove symlink at ~/.config/opencode/command/<prefix>"
     echo "  claude         Remove symlink at ~/.claude/commands/<prefix>"
     echo "  cursor         Remove symlink at ~/.cursor/commands/<prefix>"
+    echo "  windsurf       Remove prefixed copied prompts from ~/.codeium/windsurf/global_workflows"
     echo "  roo            Remove copied prompts from ~/.roo/commands (prefixed with configured prefix)"
     echo "  all            Remove all managed links and copies"
 }
@@ -679,6 +737,7 @@ cmd_unlink() {
             clear_linked_target "cursor"
             unlink_roo || status=1
             unlink_droid || status=1
+            unlink_windsurf || status=1
             unlink_copilot || status=1
             unlink_codex || status=1
             clear_all_linked_targets
@@ -691,6 +750,9 @@ cmd_unlink() {
             ;;
         droid)
             unlink_droid || status=1
+            ;;
+        windsurf)
+            unlink_windsurf || status=1
             ;;
         copilot)
             unlink_copilot || status=1

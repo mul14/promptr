@@ -26,7 +26,7 @@ curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | PRO
 ## Everyday commands
 
 - `promptr update` — pull the latest prompts into `~/.prompts`.
-- `promptr link antigravity|codex|copilot|droid|opencode|claude|cursor|roo|all` — copy prefixed `*.md` files to AntiGravity/Roo, copy prefixed `.prompt.md` files to Copilot (platform path), Droid at `~/.factory/commands`, and Codex at `~/.codex/prompts`, and create symlinks for OpenCode/Claude/Cursor using the configured prefix. Add `--force` if a link already exists. Override copy prefixes with `PROMPTR_PREFIX` (default stored prefix `promptr`, filenames use `<prefix>-<name>`).
+- `promptr link antigravity|codex|copilot|droid|opencode|claude|cursor|windsurf|roo|all` — copy prefixed `*.md` files to AntiGravity/Roo/Windsurf, copy prefixed `.prompt.md` files to Copilot (platform path), Droid at `~/.factory/commands`, and Codex at `~/.codex/prompts`, and create symlinks for OpenCode/Claude/Cursor using the configured prefix. Add `--force` if a link already exists. Override copy prefixes with `PROMPTR_PREFIX` (default stored prefix `promptr`, filenames use `<prefix>-<name>`).
 - `promptr self-update` — download the latest CLI script and save it to `~/.local/bin`.
 - `promptr --help` — show all options.
 
@@ -38,6 +38,7 @@ curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | PRO
 - Codex prompt copies (when linked) are stored in `~/.codex/prompts` with filenames prefixed by `PROMPTR_PREFIX`.
 - Copilot prompt copies (when linked) are stored with `PROMPTR_PREFIX` filename prefixes and `.prompt.md` suffixes in `~/Application Support/Code/User/prompts` on macOS or `~/.config/Code/User/prompts` on Linux.
 - Droid prompt copies (when linked) are stored with `PROMPTR_PREFIX` filename prefixes in `~/.factory/commands`.
+- Windsurf prompt copies (when linked) are stored with `PROMPTR_PREFIX` filename prefixes in `~/.codeium/windsurf/global_workflows`.
 - Cursor symlink (when linked) lives at `~/.cursor/commands/<prefix>` using the undashed prefix value.
 
 ## Prompt format
