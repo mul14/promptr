@@ -20,13 +20,13 @@ curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | PRO
 ```
 Want a custom filename prefix for copied prompts? Set it when running setup (it will be saved to `~/.config/promptr/prefix`; add it to your shell profile if you want to override per session):
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | PROMPTR_REPO=https://github.com/your/prompt.git PROMPTR_PREFIX=my- bash
+curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | PROMPTR_REPO=https://github.com/your/prompt.git PROMPTR_PREFIX=my bash
 ```
 
 ## Everyday commands
 
 - `promptr update` — pull the latest prompts into `~/.prompts`.
-- `promptr link antigravity|codex|copilot|droid|opencode|claude|roo|all` — copy `*.md` files to AntiGravity/Roo, copy prefixed `.prompt.md` files to Copilot (platform path), Droid at `~/.factory/commands`, and Codex at `~/.codex/prompts`, and create symlinks for OpenCode/Claude. Add `--force` if a link already exists. Override copy prefixes with `PROMPTR_PREFIX` (default `promptr-`).
+- `promptr link antigravity|codex|copilot|droid|opencode|claude|roo|all` — copy prefixed `*.md` files to AntiGravity/Roo, copy prefixed `.prompt.md` files to Copilot (platform path), Droid at `~/.factory/commands`, and Codex at `~/.codex/prompts`, and create symlinks for OpenCode/Claude using the configured prefix. Add `--force` if a link already exists. Override copy prefixes with `PROMPTR_PREFIX` (default stored prefix `promptr`, filenames use `<prefix>-<name>`).
 - `promptr self-update` — download the latest CLI script and save it to `~/.local/bin`.
 - `promptr --help` — show all options.
 
@@ -34,7 +34,7 @@ curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | PRO
 
 - Prompts live in `~/.prompts` by default. Set `PROMPTR_DIR` before running commands to use a different location.
 - The CLI installs to `~/.local/bin/promptr`. Make sure `~/.local/bin` is on your PATH.
-- Set `PROMPTR_PREFIX` to change the filename prefix for copied prompts (default `promptr-`). The last configured value is stored at `~/.config/promptr/prefix` and used automatically.
+- Set `PROMPTR_PREFIX` to change the filename prefix for copied prompts (set it without a trailing dash; default stored prefix `promptr`, producing `promptr-` filenames when copying). The last configured value is stored at `~/.config/promptr/prefix` and used automatically, including for undashed symlink names to OpenCode/Claude.
 - Codex prompt copies (when linked) are stored in `~/.codex/prompts` with filenames prefixed by `PROMPTR_PREFIX`.
 - Copilot prompt copies (when linked) are stored with `PROMPTR_PREFIX` filename prefixes and `.prompt.md` suffixes in `~/Application Support/Code/User/prompts` on macOS or `~/.config/Code/User/prompts` on Linux.
 - Droid prompt copies (when linked) are stored with `PROMPTR_PREFIX` filename prefixes in `~/.factory/commands`.

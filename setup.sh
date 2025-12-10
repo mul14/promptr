@@ -10,7 +10,7 @@ fi
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | bash -s -- https://github.com/your/prompt.git
 #   curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | PROMPTR_REPO=https://github.com/your/prompt.git bash
-#   curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | PROMPTR_REPO=https://github.com/your/prompt.git PROMPTR_PREFIX=custom- bash
+#   curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | PROMPTR_REPO=https://github.com/your/prompt.git PROMPTR_PREFIX=custom bash
 #   PROMPTR_REPO=https://github.com/your/prompt.git bash setup.sh   # using a local copy of setup.sh
 #
 # Arguments:
@@ -71,6 +71,14 @@ if [ -f "$INSTALL_BIN" ]; then
     cli_was_present=true
 fi
 
+strip_trailing_dashes() {
+    local value=$1
+    while [ "${value%"-"}" != "$value" ]; do
+        value="${value%"-"}"
+    done
+    echo "$value"
+}
+
 echo "Downloading promptr CLI to $INSTALL_BIN from $PROMPTR_CLI_URL ..."
 mkdir -p "$HOME/.local/bin"
 if command -v curl >/dev/null 2>&1; then
@@ -101,8 +109,12 @@ else
 fi
 if [ -n "${PROMPTR_PREFIX:-}" ]; then
     mkdir -p "$CONFIG_DIR"
-    echo -n "$PROMPTR_PREFIX" >"$PREFIX_FILE"
-    echo "Using PROMPTR_PREFIX=\"$PROMPTR_PREFIX\" for copied filenames (saved to $PREFIX_FILE). Add this export to your shell profile to override per session."
+    prefix_value=$(strip_trailing_dashes "$PROMPTR_PREFIX")
+    if [ -z "$prefix_value" ]; then
+        prefix_value="promptr"
+    fi
+    echo -n "$prefix_value" >"$PREFIX_FILE"
+    echo "Using PROMPTR_PREFIX=\"$prefix_value\" for copied filenames (saved to $PREFIX_FILE). Copies add a trailing dash automatically; symlink names use the plain prefix. Add this export to your shell profile to override per session."
 fi
 
 PATH_LINE_ADDED=false
