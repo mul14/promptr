@@ -26,7 +26,7 @@ curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | PRO
 ## Everyday commands
 
 - `promptr update` — pull the latest prompts into `~/.prompts`.
-- `promptr link antigravity|codex|copilot|droid|gemini|opencode|claude|cursor|windsurf|roo|all` — copy prefixed `*.md` files to AntiGravity/Roo/Windsurf, copy prefixed `.prompt.md` files to Copilot (platform path), Droid at `~/.factory/commands`, Gemini TOML files at `~/.gemini/commands`, and Codex at `~/.codex/prompts`, and create symlinks for OpenCode/Claude/Cursor using the configured prefix. Add `--force` if a link already exists. Override copy prefixes with `PROMPTR_PREFIX` (default stored prefix `promptr`, filenames use `<prefix>-<name>`).
+- `promptr link antigravity|codex|copilot|droid|gemini|qwen|opencode|claude|cursor|windsurf|roo|all` — copy prefixed `*.md` files to AntiGravity/Roo/Windsurf, copy prefixed `.prompt.md` files to Copilot (platform path), Droid at `~/.factory/commands`, Gemini TOML files at `~/.gemini/commands`, Qwen TOML files at `~/.qwen/commands`, and Codex at `~/.codex/prompts`, and create symlinks for OpenCode/Claude/Cursor using the configured prefix. Add `--force` if a link already exists. Override copy prefixes with `PROMPTR_PREFIX` (default stored prefix `promptr`, filenames use `<prefix>-<name>`).
 - `promptr self-update` — download the latest CLI script and save it to `~/.local/bin`.
 - `promptr --help` — show all options.
 
@@ -40,6 +40,7 @@ curl -fsSL https://raw.githubusercontent.com/mul14/promptr/master/setup.sh | PRO
 - Droid prompt copies (when linked) are stored with `PROMPTR_PREFIX` filename prefixes in `~/.factory/commands`.
 - Windsurf prompt copies (when linked) are stored with `PROMPTR_PREFIX` filename prefixes in `~/.codeium/windsurf/global_workflows`.
 - Gemini command copies (when linked) are stored as TOML files with `PROMPTR_PREFIX` filename prefixes in `~/.gemini/commands` (`description` from frontmatter `description`, `prompt` from the Markdown body).
+- Qwen command copies (when linked) are stored as TOML files with `PROMPTR_PREFIX` filename prefixes in `~/.qwen/commands` (`description` from frontmatter `description`, `prompt` from the Markdown body).
 - Cursor symlink (when linked) lives at `~/.cursor/commands/<prefix>` using the undashed prefix value.
 
 ## Prompt format

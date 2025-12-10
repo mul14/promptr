@@ -1,36 +1,10 @@
-# promptr-cli Specification
-
-## Purpose
-TBD - created by archiving change add-promptr-cli. Update Purpose after archive.
-## Requirements
-### Requirement: CLI installation script
-Promptr SHALL provide a single-command installer (curl or wget) that clones a configurable prompt repository URL into `~/.prompts`, installs the CLI into `~/.local/bin`, ensures the path is on the user's PATH (adding it based on the current shell if needed), and supports Unix-like systems including WSL. If no repository is provided via argument or environment variable, the installer MUST exit with a clear error and instructions instead of cloning a default.
-
-#### Scenario: Install via curl on Unix-like system with provided repo
-- **WHEN** the user runs the published curl install command on a Unix-like system (including WSL) and supplies a repository via argument or environment variable
-- **THEN** the installer clones the provided repository into `~/.prompts`, installs `promptr` into `~/.local/bin` with execute permission, and ensures `~/.local/bin` is on PATH for the current shell
-
-#### Scenario: Install via wget on Unix-like system with provided repo
-- **WHEN** the user runs the published wget install command on a Unix-like system (including WSL) and supplies a repository via argument or environment variable
-- **THEN** the installer clones the provided repository into `~/.prompts`, installs `promptr` into `~/.local/bin` with execute permission, and ensures `~/.local/bin` is on PATH for the current shell
-
-#### Scenario: Missing repository fails with guidance
-- **WHEN** the user runs the installer without providing a repository via argument or environment variable
-- **THEN** the installer exits with an error explaining that a repository is required and shows how to pass it (e.g., argument or `PROMPTR_REPO`)
-
+## MODIFIED Requirements
 ### Requirement: Prompt repository updates
 Promptr CLI SHALL provide an `update` command that pulls the latest content into `~/.prompts`, refreshes AntiGravity prompt copies when that target is linked in config using filenames composed of the configured/stored prefix (default `promptr`) plus a trailing `-` before the basename, refreshes Roo prompt copies with the same dashed prefix scheme, refreshes Droid prompt copies in `~/.factory/commands` with filename prefixes composed of the configured/stored prefix plus a trailing `-` before the basename, refreshes Copilot prompt copies with `<prefix>-<name>.prompt.md` filenames using the same configurable prefix default, refreshes Codex prompt copies with prefixed filenames using the configured prefix plus a trailing dash, refreshes Windsurf prompt copies in `~/.codeium/windsurf/global_workflows` with filenames composed of the configured/stored prefix plus a trailing dash, refreshes Gemini TOML copies in `~/.gemini/commands` with filenames composed of the configured/stored prefix plus a trailing dash and a `.toml` extension, refreshes Qwen TOML copies in `~/.qwen/commands` with filenames composed of the configured/stored prefix plus a trailing dash and a `.toml` extension, and reports errors clearly. When `PROMPTR_PREFIX` is set, the CLI SHALL persist that value (without forcing a trailing dash) to `~/.config/promptr/prefix` for reuse when the environment variable is unset.
 
 #### Scenario: Update refreshes Qwen TOML copies when linked
 - **WHEN** the user runs `promptr update` and the stored link state indicates Qwen is linked
 - **THEN** the CLI writes TOML files for each `*.md` prompt (excluding `README.md`) into `~/.qwen/commands` with filenames composed of the configured prefix (default `promptr`), a trailing dash, the prompt basename, and a `.toml` extension, where `description` is taken from YAML frontmatter `description` (empty string when missing) and `prompt` is the Markdown body, replacing managed files so Qwen commands stay in sync
-
-### Requirement: CLI self-update
-Promptr CLI SHALL provide a `self-update` command that refreshes the installed CLI from the local repository copy and preserves executable permissions.
-
-#### Scenario: Self-update refreshes CLI
-- **WHEN** the user runs `promptr self-update`
-- **THEN** the CLI copies its latest script from the repository into the installed PATH location with executable permissions and reports success
 
 ### Requirement: Agent link management
 Promptr CLI SHALL provide `promptr link [--force] <agent|all>` to create symlinks from `~/.prompts` into supported agent locations (OpenCode at `~/.config/opencode/command/<prefix>`, Claude at `~/.claude/commands/<prefix>`, Cursor at `~/.cursor/commands/<prefix>`) using the configured/stored prefix (default `promptr`) with no trailing dash, and copy prompts for AntiGravity into `~/.gemini/antigravity/global_workflows`, Roo into `~/.roo/commands`, Droid into `~/.factory/commands`, Copilot into the Copilot prompts directory (`~/Application Support/Code/User/prompts` on macOS, `~/.config/Code/User/prompts` on Linux) using `<prefix>-<name>.prompt.md` filenames, Codex into `~/.codex/prompts`, Windsurf into `~/.codeium/windsurf/global_workflows`, Gemini into `~/.gemini/commands` as TOML files, and Qwen into `~/.qwen/commands` as TOML files. AntiGravity, Roo, Droid, Copilot, Codex, Windsurf, Gemini, and Qwen copies MUST prefix each filename with the value of `PROMPTR_PREFIX` or the stored prefix in `~/.config/promptr/prefix`, defaulting to `promptr`, append a trailing `-` when constructing filenames, and use `.toml` extensions for Gemini and Qwen files while mapping `description` from frontmatter (empty when missing) and `prompt` from the Markdown body. Link operations MUST persist target state under `~/.config/promptr` so future updates can refresh copies and unlink can reverse the operation.
@@ -47,17 +21,6 @@ Promptr CLI SHALL provide `promptr link [--force] <agent|all>` to create symlink
 - **WHEN** the user runs `promptr link --force <agent>` and a symlink or prior copy already exists at the target path
 - **THEN** the CLI replaces the existing asset after validating the path is not nested or self-referential (for symlinks), applies the configured prefix from `PROMPTR_PREFIX` or stored prefix for Droid, Copilot, Codex, Windsurf, Gemini, and Qwen copies with a trailing dash before filenames, uses `<prefix>-<name>.prompt.md` filenames for Copilot, uses `.toml` extension with description/prompt mapping for Gemini and Qwen, replaces managed Droid files, and updates the config to reflect the link state
 
-### Requirement: CLI interface and logging
-Promptr CLI SHALL provide `--version`, `--help`, and `--verbose` flags; `--verbose` MUST emit additional operational logs without changing behavior.
-
-#### Scenario: Show version and help
-- **WHEN** the user runs `promptr --version` or `promptr --help`
-- **THEN** the CLI prints the version information or usage summary respectively and exits without side effects
-
-#### Scenario: Verbose logging enabled
-- **WHEN** the user runs any command with `--verbose`
-- **THEN** the CLI prints additional diagnostic messages while performing the requested action, and the core behavior remains unchanged
-
 ### Requirement: Unlink command and link state cleanup
 Promptr CLI SHALL provide `promptr unlink <agent|all>` to remove linked targets (symlinks or copied prompt files) and clear the corresponding entry in `~/.config/promptr`, leaving other targets untouched.
 
@@ -68,4 +31,3 @@ Promptr CLI SHALL provide `promptr unlink <agent|all>` to remove linked targets 
 #### Scenario: Unlink all agents
 - **WHEN** the user runs `promptr unlink all`
 - **THEN** the CLI removes all managed symlinks (including Cursor), removes AntiGravity prompt copies, removes Roo prompt copies, removes Droid prompt copies from `~/.factory/commands` (only the files prefixed by the configured `PROMPTR_PREFIX` or stored prefix with trailing dash), removes Copilot prompt copies from the platform prompts directory (only files with the configured prefix plus trailing dash and `.prompt.md` suffix), removes prefix-matching Codex prompt copies, removes prefix-matching Windsurf prompt copies from `~/.codeium/windsurf/global_workflows`, removes prefix-matching Gemini `.toml` prompt copies from `~/.gemini/commands`, removes prefix-matching Qwen `.toml` prompt copies from `~/.qwen/commands`, clears all recorded link states, and reports completion
-
